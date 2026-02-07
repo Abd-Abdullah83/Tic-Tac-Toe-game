@@ -1,0 +1,205 @@
+
+#include<iostream>
+using namespace std;
+bool inboard(int r, int c);
+void board(char** p);
+void initialboard(char** p);
+void Enter(char a, char b, int& r, int& c);
+bool validmove(int r, int c, char** p);
+void makemove(int r, int c, char** p, char s);
+bool checkCol(char** p, int& p1, int& p2);
+bool checkRow(char** p, int& p1, int& p2);
+bool diagonal(char** p, int& p1, int& p2);
+bool antiDiagonal(char** p, int& p1, int& p2);
+bool win(char** p, int& p1, int& p2);
+
+bool turn = true;
+int n = 3;
+
+
+bool inboard(int r, int c)
+{
+	return r >= 0 && r < n && c >= 0 && c < n;
+}
+bool validmove(int r, int c, char** p)
+{
+	return inboard(r, c) && p[r][c] == '*';
+}
+void initialboard(char** p)
+{
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			p[i][j] = '*';
+		}
+	}
+}
+void board(char **p)
+{
+	cout << "\n-----------------------\n\n";
+	for (int i = 0; i < n; i++)
+	{
+		cout << i+1<<"| ";
+		for (int j = 0; j < n; j++)
+		{
+			cout <<"  " << p[i][j] << "   ";
+		}
+		cout << "| ";
+		cout << "\n\n";
+	}
+	cout << "_______________________";
+	cout << "\n |   1     2     3   |";
+	cout << "\n-----------------------\n";
+}
+void Enter(char a, char b, int& r, int& c)
+{
+	cout << (turn ? "\nPlayer X's Turn" : "\nPlayer O's Turn") << endl;
+	cout << "\nEnter row and column e.g. 1 2 (First-Row 2nd-col) : ";
+	cin >> a >> b;
+	r = int(a) - 49;
+	c = int(b) - 49;
+}
+void makemove(int r, int c,char **p,char s)
+{
+	p[r][c] = s;
+}
+
+bool checkRow(char **p,int &p1,int &p2)//after five turns
+{
+
+	for (int i = 0; i < n; i++)
+	{
+		p1 = 0, p2 = 0;
+		for (int j = 0; j < n; j++)
+		{
+			if (p[i][j] == 'X')
+				p1++;
+			else if (p[i][j] == 'O')
+				p2++;
+		}
+		if (p1 == n || p2 ==n)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+bool checkCol(char** p, int& p1, int& p2)//after five turns
+{
+	for (int i = 0; i < n; i++)
+	{
+		p1 = 0, p2 = 0;
+		for (int j = 0; j < n; j++)
+		{
+			if (p[j][i] == 'X')
+				p1++;
+			else if (p[j][i] == 'O')
+				p2++;
+		}
+		if (p1 == n || p2 == n)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+bool diagonal(char** p, int& p1, int& p2)
+{
+	p1 = 0, p2 = 0;
+	for (int i = 0; i < n; i++)
+	{
+		if (p[i][i] == 'X')
+			p1++;
+		else if (p[i][i] == 'O')
+			p2++;
+	}
+	if (p1 == n || p2 == n)
+	{
+		return true;
+	}
+	return false;
+}
+bool antiDiagonal(char** p, int& p1, int& p2)
+{
+	p1 = 0;
+	p2 = 0;
+	for (int i = 0; i < n; i++)
+	{
+		if (p[i][n - 1 - i] == 'X')
+			p1++;
+		else if (p[i][n - 1 - i] == 'O')
+			p2++;
+	}
+	if (p1 == n || p2 == n)
+	{
+		return true;
+	}
+	return false;
+
+}
+bool win(char** p, int& p1, int& p2)
+{
+	if (checkRow(p, p1, p2) || checkCol(p, p1, p2) || diagonal(p, p1, p2) || antiDiagonal(p, p1, p2))
+		return true;
+	else
+		return false;
+}
+
+
+
+int main()
+{
+	int r = 0, c = 0,m=0,p1=0,p2=0;
+	char a = '0', b = '0';
+	char** p = new char*[n];
+	for (int i = 0; i < n; i++)
+	{
+		p[i] = new char[n];
+	}
+	initialboard(p);
+	while (m<n*n)
+	{
+		
+		board(p);
+		Enter(a, b, r, c);
+		if (validmove(r, c, p))
+		{
+			char s = '0';
+			s = turn ? 'X' : 'O';
+			makemove(r, c, p, s);
+			m++;
+			turn = !turn;
+		}
+		else
+		{
+			cout << "\n OOPs!! Invalid Move !! \n";
+		}
+		if (m >= n*2-1 && win(p, p1, p2))
+		{
+			board(p);
+			cout << "\n\n-------Congratulations-------\n";
+			cout << endl << (p1 == n ? "Player X's Won" : "Player O's Won") << endl;
+			cout << "\n-----------------------------";
+			break;
+		}
+		if (m == n*n)
+		{
+			board(p);
+			cout << "\n\n----------OOPs----------\n";
+			cout << endl << "  Game Has Draw!!\n BE-SMART for Next time" << endl;
+			cout << "\n--------------------------";
+			break;
+		}
+	}
+
+
+
+	for (int i = 0; i < n; i++)
+	{
+		delete []p[i];
+	}
+	delete []p;
+
+	return 0;
+}
