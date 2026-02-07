@@ -1,0 +1,404 @@
+#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+#include <iostream>
+#include <string>
+
+using namespace std;
+using namespace sf;
+
+const int n = 3;
+const int CELL_SIZE = 200;
+const int BOARD_SIZE = n * CELL_SIZE;
+const int WINDOW_WIDTH = 1000;
+const int WINDOW_HEIGHT = 800;
+
+
+char board[n][n];
+bool turn = true; 
+int moveCount = 0;
+int selectedTheme = 0;
+
+
+Color themes[4][3] = {
+    {Color(52, 73, 94), Color(149, 165, 166), Color(236, 240, 241)},      // Theme 1: Blue-Gray
+    {Color(26, 82, 118), Color(78, 205, 196), Color(255, 107, 107)},      // Theme 2: Ocean
+    {Color(72, 52, 212), Color(133, 99, 242), Color(248, 194, 145)},      // Theme 3: Purple-Orange
+    {Color(20, 90, 50), Color(56, 173, 169), Color(253, 203, 110)}        // Theme 4: Green-Teal
+};
+
+
+void initialBoard();
+bool inBoard(int r, int c);
+bool validMove(int r, int c);
+void makeMove(int r, int c, char s);
+bool checkRow(int& p1, int& p2);
+bool checkCol(int& p1, int& p2);
+bool diagonal(int& p1, int& p2);
+bool antiDiagonal(int& p1, int& p2);
+bool win(int& p1, int& p2);
+void drawBoard(RenderWindow& window);
+void drawPieces(RenderWindow& window, Texture& xTexture, Texture& oTexture);
+void drawMenu(RenderWindow& window, Font& font);
+void drawGameOverScreen(RenderWindow& window, Font& font, string message);
+
+// Initialize board
+void initialBoard() {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            board[i][j] = '*';
+        }
+    }
+}
+bool inBoard(int r, int c) {
+    return r >= 0 && r < n && c >= 0 && c < n;
+}
+bool validMove(int r, int c) {
+    return inBoard(r, c) && board[r][c] == '*';
+}
+void makeMove(int r, int c, char s) {
+    board[r][c] = s;
+}
+bool checkRow(int& p1, int& p2) {
+    for (int i = 0; i < n; i++) {
+        p1 = 0, p2 = 0;
+        for (int j = 0; j < n; j++) {
+            if (board[i][j] == 'X')
+                p1++;
+            else if (board[i][j] == 'O')
+                p2++;
+        }
+        if (p1 == n || p2 == n) {
+            return true;
+        }
+    }
+    return false;
+}
+bool checkCol(int& p1, int& p2) {
+    for (int i = 0; i < n; i++) {
+        p1 = 0, p2 = 0;
+        for (int j = 0; j < n; j++) {
+            if (board[j][i] == 'X')
+                p1++;
+            else if (board[j][i] == 'O')
+                p2++;
+        }
+        if (p1 == n || p2 == n) {
+            return true;
+        }
+    }
+    return false;
+}
+bool diagonal(int& p1, int& p2) {
+    p1 = 0, p2 = 0;
+    for (int i = 0; i < n; i++) {
+        if (board[i][i] == 'X')
+            p1++;
+        else if (board[i][i] == 'O')
+            p2++;
+    }
+    if (p1 == n || p2 == n) {
+        return true;
+    }
+    return false;
+}
+bool antiDiagonal(int& p1, int& p2) {
+    p1 = 0;
+    p2 = 0;
+    for (int i = 0; i < n; i++) {
+        if (board[i][n - 1 - i] == 'X')
+            p1++;
+        else if (board[i][n - 1 - i] == 'O')
+            p2++;
+    }
+    if (p1 == n || p2 == n) {
+        return true;
+    }
+    return false;
+}
+bool win(int& p1, int& p2) {
+    if (checkRow(p1, p2) || checkCol(p1, p2) || diagonal(p1, p2) || antiDiagonal(p1, p2))
+        return true;
+    else
+        return false;
+}
+
+
+void drawBoard(RenderWindow& window) {
+    int startX = (WINDOW_WIDTH - BOARD_SIZE) / 2;
+    int startY = (WINDOW_HEIGHT - BOARD_SIZE) / 2 + 50;
+
+    // Draw cells
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            RectangleShape cell(Vector2f(CELL_SIZE - 5, CELL_SIZE - 5));
+            cell.setPosition(startX + j * CELL_SIZE, startY + i * CELL_SIZE);
+
+            // Alternate colors based on theme
+            if ((i + j) % 2 == 0)
+                cell.setFillColor(themes[selectedTheme][1]);
+            else
+                cell.setFillColor(themes[selectedTheme][2]);
+
+            cell.setOutlineColor(themes[selectedTheme][0]);
+            cell.setOutlineThickness(2);
+            window.draw(cell);
+        }
+    }
+
+    // Draw grid lines
+    for (int i = 1; i < n; i++) {
+        RectangleShape hLine(Vector2f(BOARD_SIZE, 5));
+        hLine.setPosition(startX, startY + i * CELL_SIZE - 2.5);
+        hLine.setFillColor(themes[selectedTheme][0]);
+        window.draw(hLine);
+
+        RectangleShape vLine(Vector2f(5, BOARD_SIZE));
+        vLine.setPosition(startX + i * CELL_SIZE - 2.5, startY);
+        vLine.setFillColor(themes[selectedTheme][0]);
+        window.draw(vLine);
+    }
+}
+void drawPieces(RenderWindow& window, Texture& xTexture, Texture& oTexture) {
+    int startX = (WINDOW_WIDTH - BOARD_SIZE) / 2;
+    int startY = (WINDOW_HEIGHT - BOARD_SIZE) / 2 + 50;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (board[i][j] != '*') {
+                Sprite piece;
+                if (board[i][j] == 'X') {
+                    piece.setTexture(xTexture);
+                }
+                else {
+                    piece.setTexture(oTexture);
+                }
+
+                // Scale to fit cell (with padding)
+                float scaleX = (CELL_SIZE - 40) / piece.getLocalBounds().width;
+                float scaleY = (CELL_SIZE - 40) / piece.getLocalBounds().height;
+                float scale = min(scaleX, scaleY);
+                piece.setScale(scale, scale);
+
+                // Center the piece in the cell
+                float pieceWidth = piece.getGlobalBounds().width;
+                float pieceHeight = piece.getGlobalBounds().height;
+                piece.setPosition(
+                    startX + j * CELL_SIZE + (CELL_SIZE - pieceWidth) / 2,
+                    startY + i * CELL_SIZE + (CELL_SIZE - pieceHeight) / 2
+                );
+
+                window.draw(piece);
+            }
+        }
+    }
+}
+
+void drawMenu(RenderWindow& window, Font& font) {
+    Text title("TIC-TAC-TOE", font, 50);
+    title.setFillColor(Color::White);
+    title.setStyle(Text::Bold);
+    title.setPosition((WINDOW_WIDTH - title.getGlobalBounds().width) / 2, 20);
+    window.draw(title);
+
+    Text turnText;
+    if (turn)
+        turnText.setString("Player X's Turn");
+    else
+        turnText.setString("Player O's Turn");
+
+    turnText.setFont(font);
+    turnText.setCharacterSize(30);
+    turnText.setFillColor(Color::White);
+    turnText.setPosition((WINDOW_WIDTH - turnText.getGlobalBounds().width) / 2, 80);
+    window.draw(turnText);
+
+    // Theme selector
+    Text themeText("Theme: Press 1-4 to change", font, 20);
+    themeText.setFillColor(Color::White);
+    themeText.setPosition(20, WINDOW_HEIGHT - 90);
+    window.draw(themeText);
+
+    Text resetText("Press R to Reset", font, 20);
+    resetText.setFillColor(Color::White);
+    resetText.setPosition(20, WINDOW_HEIGHT - 60);
+    window.draw(resetText);
+
+    Text exitText("Press X to Exit", font, 20);
+    exitText.setFillColor(Color::White);
+    exitText.setPosition(20, WINDOW_HEIGHT - 30);
+    window.draw(exitText);
+}
+void drawGameOverScreen(RenderWindow& window, Font& font, string message) {
+    RectangleShape overlay(Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
+    overlay.setFillColor(Color(0, 0, 0, 150));
+    window.draw(overlay);
+
+    Text gameOverText(message, font, 60);
+    gameOverText.setFillColor(Color::Yellow);
+    gameOverText.setStyle(Text::Bold);
+    gameOverText.setPosition(
+        (WINDOW_WIDTH - gameOverText.getGlobalBounds().width) / 2,
+        WINDOW_HEIGHT / 2 - 100
+    );
+    window.draw(gameOverText);
+
+    Text restartText("Press R to Restart | Press X to Exit", font, 30);
+    restartText.setFillColor(Color::White);
+    restartText.setPosition(
+        (WINDOW_WIDTH - restartText.getGlobalBounds().width) / 2,
+        WINDOW_HEIGHT / 2 + 50
+    );
+    window.draw(restartText);
+}
+
+int main() {
+    RenderWindow window(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Tic-Tac-Toe Game");
+    window.setFramerateLimit(60);
+
+    // Load textures
+    Texture xTexture, oTexture;
+    if (!xTexture.loadFromFile("tictak/X.png")) {
+        cerr << "Error loading X.png" << endl;
+        return -1;
+    }
+    if (!oTexture.loadFromFile("tictak/oo.png")) {
+        cerr << "Error loading oo.png" << endl;
+        return -1;
+    }
+
+    // Load font
+    Font font;
+    if (!font.loadFromFile("Font/arial.ttf")) {
+        cerr << "Error loading font" << endl;
+        return -1;
+    }
+
+    // Load sounds
+    SoundBuffer move1Buffer, move2Buffer, winBuffer, drawBuffer;
+    bool move1Loaded = move1Buffer.loadFromFile("audio/move1.wav");
+    bool move2Loaded = move2Buffer.loadFromFile("audio/move2.wav");
+    bool winLoaded = winBuffer.loadFromFile("audio/win.wav");
+    bool drawLoaded = drawBuffer.loadFromFile("audio/draw.wav");
+
+    if (!move1Loaded) {
+        cerr << "Error loading move1 sound" << endl;
+    }
+    if (!move2Loaded) {
+        cerr << "Error loading move2 sound" << endl;
+    }
+    if (!winLoaded) {
+        cerr << "Error loading win sound (using move1 sound as fallback)" << endl;
+        if (move1Loaded) winBuffer = move1Buffer;
+    }
+    if (!drawLoaded) {
+        cerr << "Error loading draw sound (using move1 sound as fallback)" << endl;
+        if (move1Loaded) drawBuffer = move1Buffer;
+    }
+
+    Sound move1Sound(move1Buffer);
+    Sound move2Sound(move2Buffer);
+    Sound winSound(winBuffer);
+    Sound drawSound(drawBuffer);
+
+    // Initialize game
+    initialBoard();
+    bool gameOver = false;
+    string gameOverMessage = "";
+    int p1 = 0, p2 = 0;
+
+    while (window.isOpen()) {
+        Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == Event::Closed)
+                window.close();
+
+            // Keyboard controls
+            if (event.type == Event::KeyPressed) {
+                // Theme selection
+                if (event.key.code == Keyboard::Num1) selectedTheme = 0;
+                else if (event.key.code == Keyboard::Num2) selectedTheme = 1;
+                else if (event.key.code == Keyboard::Num3) selectedTheme = 2;
+                else if (event.key.code == Keyboard::Num4) selectedTheme = 3;
+
+                // Reset game
+                else if (event.key.code == Keyboard::R) {
+                    initialBoard();
+                    turn = true;
+                    moveCount = 0;
+                    gameOver = false;
+                    gameOverMessage = "";
+                }
+
+                // Exit game (X key)
+                else if (event.key.code == Keyboard::X) {
+                    window.close();
+                }
+            }
+
+            // Mouse click for moves
+            if (event.type == Event::MouseButtonPressed && !gameOver) {
+                if (event.mouseButton.button == Mouse::Left) {
+                    int startX = (WINDOW_WIDTH - BOARD_SIZE) / 2;
+                    int startY = (WINDOW_HEIGHT - BOARD_SIZE) / 2 + 50;
+
+                    int mouseX = event.mouseButton.x;
+                    int mouseY = event.mouseButton.y;
+
+                    // Check if click is within board
+                    if (mouseX >= startX && mouseX < startX + BOARD_SIZE &&
+                        mouseY >= startY && mouseY < startY + BOARD_SIZE) {
+
+                        int col = (mouseX - startX) / CELL_SIZE;
+                        int row = (mouseY - startY) / CELL_SIZE;
+
+                        if (validMove(row, col)) {
+                            char s = turn ? 'X' : 'O';
+                            makeMove(row, col, s);
+                            moveCount++;
+
+                            // Play alternating move sounds
+                            if (turn) {
+                                if (move1Loaded) move1Sound.play();
+                            }
+                            else {
+                                if (move2Loaded) move2Sound.play();
+                            }
+
+                            turn = !turn;
+
+                            // Check for win
+                            if (moveCount >= n * 2 - 1 && win(p1, p2)) {
+                                gameOver = true;
+                                gameOverMessage = (p1 == n ? "Player X Won!" : "Player O Won!");
+                                if (winLoaded) winSound.play();
+                            }
+                            // Check for draw
+                            else if (moveCount == n * n) {
+                                gameOver = true;
+                                gameOverMessage = "Game Draw!";
+                                if (drawLoaded) drawSound.play();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Clear window
+        window.clear(Color(30, 30, 30));
+
+        // Draw game elements
+        drawBoard(window);
+        drawPieces(window, xTexture, oTexture);
+        drawMenu(window, font);
+
+        // Draw game over screen if game is over
+        if (gameOver) {
+            drawGameOverScreen(window, font, gameOverMessage);
+        }
+
+        window.display();
+    }
+
+    return 0;
+}
